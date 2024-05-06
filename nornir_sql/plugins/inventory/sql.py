@@ -59,6 +59,17 @@ def _get_defaults(data: Optional[Dict[str, Any]] = None) -> Defaults:
         connection_options=_get_connection_options(data.get("connection_options", {})),
     )
 
+def _data_extra( key, value, result_dict):
+    # Multiple nested keys in data
+    nested_keys = key.split('.')
+    temp = result_dict
+    for nested_key in nested_keys[1:-1]:
+        if nested_key not in temp:
+            temp[nested_key] = {}
+        temp = temp[nested_key]
+    temp[nested_keys[-1]] = value
+    return temp
+
 
 class SQLInventory:
     """SQLInventory implements SQL inventory plugin for Nornir"""
@@ -131,7 +142,9 @@ class SQLInventory:
             extra_data = data["data"]
         else:
             # extra data is provided by SQL
-            extra_data = {extra.split(".")[1]: data.get(extra, "") for extra in data if "data." in extra}
+            extra_data = {}
+            { extra_data.update( _data_extra(extra, data.get(extra, ""), extra_data ) ) for extra in data if "data." in extra }
+            
         ret = typ(
             name=data.get("name"),
             hostname=data.get("hostname"),
